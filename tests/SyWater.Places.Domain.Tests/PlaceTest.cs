@@ -103,4 +103,55 @@ public class PlaceTests
         Assert.Throws<PlaceNotFoundException>(() =>
             deleted.Update("X", PlaceType.Commercial, "Y", Guid.NewGuid(), Currency.Cop, MeasurementUnit.Liters, Now));
     }
-}   
+
+    // ── HU-010: select a place ───────────────────────────────────────
+
+    [Fact]
+    public void MarkAsDefault_selects_the_place_and_touches_updated_at()
+    {
+        var place = Place.Create(Guid.NewGuid(), Guid.NewGuid(), "Finca", PlaceType.Residential, "Vereda 1",
+                                 Currency.Cop, MeasurementUnit.Liters, isDefault: false, Now);
+        var later = Now.AddHours(1);
+
+        place.MarkAsDefault(later);
+
+        Assert.True(place.IsDefault);
+        Assert.Equal(later, place.UpdatedAt);
+    }
+
+    [Fact]
+    public void MarkAsDefault_on_the_selected_place_changes_nothing()
+    {
+        var place = NewPlace(); // already default
+
+        place.MarkAsDefault(Now.AddHours(1));
+
+        Assert.Equal(Now, place.UpdatedAt);
+    }
+
+    // ── HU-011: delete a place ───────────────────────────────────────
+
+    [Fact]
+    public void Delete_is_soft_and_the_place_stops_being_default()
+    {
+        var place = NewPlace();
+        var later = Now.AddDays(1);
+
+        place.Delete(later);
+
+        Assert.True(place.IsDeleted);
+        Assert.Equal(later, place.DeletedAt);
+        Assert.False(place.IsDefault);
+        Assert.Equal("Casa Bogotá", place.Name); // the data is kept for the history
+    }
+
+    [Fact]
+    public void Deleted_place_cannot_be_deleted_again_or_selected()
+    {
+        var place = NewPlace();
+        place.Delete(Now);
+
+        Assert.Throws<PlaceNotFoundException>(() => place.Delete(Now.AddMinutes(1)));
+        Assert.Throws<PlaceNotFoundException>(() => place.MarkAsDefault(Now.AddMinutes(1)));
+    }
+}
