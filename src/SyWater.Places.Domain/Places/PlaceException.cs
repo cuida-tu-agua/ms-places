@@ -13,3 +13,8 @@ public sealed class PlaceNotFoundException(Guid placeId)
 /// <summary>The city is not in the catalog. HTTP 400.</summary>
 public sealed class CityNotFoundException(Guid cityId)
     : DomainException("city.not_found", $"City {cityId} was not found.");
+
+/// <summary> a place with a linked device cannot be deleted (unlink it first). HTTP 409.</summary>
+public sealed class PlaceHasActiveDeviceException(Guid placeId)
+    : DomainException("place.has_active_device",
+        $"Place {placeId} has a linked device. Unlink the device before deleting the place.");

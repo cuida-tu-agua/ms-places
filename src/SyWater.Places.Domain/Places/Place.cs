@@ -13,10 +13,10 @@ public sealed class Place
     public string Address { get; private set; }
     public Currency Currency { get; private set; }
     public MeasurementUnit MeasurementUnit { get; private set; }
-    public bool IsDefault { get; }
+    public bool IsDefault { get; private set; }
     public DateTime CreatedAt { get; }
     public DateTime UpdatedAt { get; private set; }
-    public DateTime? DeletedAt { get; }
+    public DateTime? DeletedAt { get; private set; }
 
     public bool IsDeleted => DeletedAt is not null;
 
@@ -53,11 +53,7 @@ public sealed class Place
             currency, measurementUnit, isDefault,
             createdAt: now, updatedAt: now, deletedAt: null);
     }
-
-    /// <summary>
-    /// Rebuilds a place already stored in the database. No validation: the data was valid
-    /// when it was saved, and the database CHECK constraints guarantee it.
-    /// </summary>
+    
     public static Place Restore(
         Guid id, Guid ownerId, Guid cityId, string name, PlaceType type, string address,
         Currency currency, MeasurementUnit measurementUnit, bool isDefault,
@@ -78,6 +74,24 @@ public sealed class Place
         CityId = cityId;
         Currency = currency;
         MeasurementUnit = measurementUnit;
+        UpdatedAt = now;
+    }
+
+    public void MarkAsDefault(DateTime now)
+    {
+        if (IsDeleted) throw new PlaceNotFoundException(Id);
+        if (IsDefault) return; // selecting the place that is already selected changes nothing
+
+        IsDefault = true;
+        UpdatedAt = now;
+    }
+
+    public void Delete(DateTime now)
+    {
+        if (IsDeleted) throw new PlaceNotFoundException(Id);
+
+        DeletedAt = now;
+        IsDefault = false;
         UpdatedAt = now;
     }
 
