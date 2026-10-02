@@ -1,4 +1,5 @@
 using SyWater.Places.Application.Geography;
+using SyWater.Places.Application.Places;
 using SyWater.Places.Application.Ports.Out;
 using SyWater.Places.Domain.Places;
 
@@ -10,10 +11,15 @@ namespace SyWater.Places.Application.Tests;
 internal sealed class InMemoryPlaceRepository : IPlaceRepository
 {
     public List<Place> Items { get; } = [];
+    public List<PlaceActivity> Activity { get; } = [];
     public int UpdateCalls { get; private set; }
+    public int SetDefaultCalls { get; private set; }
 
     public Task<Place?> GetActiveAsync(Guid placeId, Guid ownerId, CancellationToken ct) =>
         Task.FromResult(Items.FirstOrDefault(p => p.Id == placeId && p.OwnerId == ownerId && !p.IsDeleted));
+
+    public Task<IReadOnlyList<Place>> ListActiveAsync(Guid ownerId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Place>>(Items.Where(p => p.OwnerId == ownerId && !p.IsDeleted).ToList());
 
     public Task<bool> OwnerHasActivePlacesAsync(Guid ownerId, CancellationToken ct) =>
         Task.FromResult(Items.Any(p => p.OwnerId == ownerId && !p.IsDeleted));
@@ -24,11 +30,49 @@ internal sealed class InMemoryPlaceRepository : IPlaceRepository
         return Task.CompletedTask;
     }
 
-    public Task UpdateAsync(Place place, CancellationToken ct)
+    public Task<bool> UpdateAsync(Place place, CancellationToken ct)
     {
         UpdateCalls++; // same instance in memory: nothing else to do
-        return Task.CompletedTask;
+        return Task.FromResult(!place.IsDeleted);
     }
+
+    public Task<bool> SetDefaultAsync(Place selected, CancellationToken ct)
+    {
+        SetDefaultCalls++;
+        UnmarkOtherDefaults(selected);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteAsync(Place deleted, Place? newDefault, PlaceActivity activity, CancellationToken ct)
+    {
+        if (newDefault is not null) UnmarkOtherDefaults(newDefault);
+        Activity.Add(activity);
+        return Task.FromResult(true);
+    }
+
+    /// <summary>What the SQL "UPDATE ... SET is_default = 0" does: rebuilds the other places as not default.</summary>
+    private void UnmarkOtherDefaults(Place keep)
+    {
+        for (var i = 0; i < Items.Count; i++)
+        {
+            var p = Items[i];
+            if (p.OwnerId != keep.OwnerId || p.Id == keep.Id || !p.IsDefault) continue;
+            Items[i] = Place.Restore(p.Id, p.OwnerId, p.CityId, p.Name, p.Type, p.Address, p.Currency,
+                                     p.MeasurementUnit, isDefault: false, p.CreatedAt, keep.UpdatedAt, p.DeletedAt);
+        }
+    }
+}
+
+/// <summary>device-service double: says which places have a device, or pretends to be down.</summary>
+internal sealed class FakeDeviceLinkChecker : IDeviceLinkChecker
+{
+    public HashSet<Guid> PlacesWithDevice { get; } = [];
+    public bool IsDown { get; set; }
+
+    public Task<bool> HasActiveDeviceAsync(Guid placeId, CancellationToken ct) =>
+        IsDown
+            ? throw new ExternalServiceUnavailableException("device-service")
+            : Task.FromResult(PlacesWithDevice.Contains(placeId));
 }
 
 internal sealed class FakeGeographyReader : IGeographyReader
