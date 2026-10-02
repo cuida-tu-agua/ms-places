@@ -1,0 +1,1 @@
+﻿namespace SyWater.Places.Infrastructure.Devices;public interface IAccessTokenProvider{    string? GetAccessToken();}
