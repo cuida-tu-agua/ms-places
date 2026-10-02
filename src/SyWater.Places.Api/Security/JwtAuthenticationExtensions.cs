@@ -1,9 +1,10 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 
 namespace SyWater.Places.Api.Security;
-
 
 public static class JwtAuthenticationExtensions
 {
@@ -18,6 +19,15 @@ public static class JwtAuthenticationExtensions
         var rsa = RSA.Create(); // not disposed on purpose: the key lives as long as the app
         rsa.ImportFromPem(File.ReadAllText(fullPath));
 
+        var redisConfiguration = config["Redis:Configuration"];
+        if (string.IsNullOrWhiteSpace(redisConfiguration))
+            throw new InvalidOperationException("Missing Redis:Configuration (the same Redis that ms-iam uses).");
+
+        var redisOptions = ConfigurationOptions.Parse(redisConfiguration);
+        redisOptions.AbortOnConnectFail = false;
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
+        services.AddSingleton<ITokenRevocationChecker, RedisTokenRevocationChecker>();
+
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -28,7 +38,7 @@ public static class JwtAuthenticationExtensions
                 {
                     ValidateIssuer = true,
                     ValidIssuer = issuer,
-                    ValidateAudience = false, // ms-iam does not emit "aud" yet (see guide)
+                    ValidateAudience = false, 
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30),
                     ValidateIssuerSigningKey = true,
@@ -36,8 +46,31 @@ public static class JwtAuthenticationExtensions
                     ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
                     NameClaimType = "sub",
                 };
+                options.Events = new JwtBearerEvents { OnTokenValidated = RejectRevokedTokens };
             });
 
         return services;
+    }
+
+    private static async Task RejectRevokedTokens(TokenValidatedContext context)
+    {
+        var principal = context.Principal;
+        var tokenId = principal?.FindFirstValue("jti");
+        var userId = principal?.FindFirstValue("sub");
+        long? issuedAt = long.TryParse(principal?.FindFirstValue("iat"), out var iat) ? iat : null;
+
+        var checker = context.HttpContext.RequestServices.GetRequiredService<ITokenRevocationChecker>();
+        try
+        {
+            if (await checker.IsRevokedAsync(tokenId, userId, issuedAt))
+                context.Fail("The token was revoked.");
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException)
+        {
+            context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("SyWater.Places.Api.Security.TokenRevocation")
+                .LogError(ex, "Redis is not available: the token cannot be checked, the request is rejected.");
+            context.Fail("The token could not be checked.");
+        }
     }
 }
