@@ -27,9 +27,10 @@ public sealed class UpdatePlaceUseCase(
         }
 
         place.Update(command.Name, command.Type, command.Address, newCity.CityId,
-                     currency, command.MeasurementUnit, clock.GetUtcNow().UtcDateTime);
+            currency, command.MeasurementUnit, clock.GetUtcNow().UtcDateTime);
 
-        await places.UpdateAsync(place, ct);
+        if (!await places.UpdateAsync(place, ct))
+            throw new PlaceNotFoundException(command.PlaceId); // deleted while the user was editing it
         return PlaceView.From(place, newCity);
     }
 }
