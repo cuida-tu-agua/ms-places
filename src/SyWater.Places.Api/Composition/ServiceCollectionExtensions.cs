@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using SyWater.Places.Api.Security;
 using SyWater.Places.Application.Ports.In;
 using SyWater.Places.Application.Ports.Out;
 using SyWater.Places.Application.UseCases;
+using SyWater.Places.Infrastructure.Devices;
 using SyWater.Places.Infrastructure.Persistence;
 
 namespace SyWater.Places.Api.Composition;
@@ -15,6 +17,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreatePlaceUseCase, CreatePlaceUseCase>();
         services.AddScoped<IGetPlaceUseCase, GetPlaceUseCase>();
         services.AddScoped<IUpdatePlaceUseCase, UpdatePlaceUseCase>();
+        services.AddScoped<IListPlacesUseCase, ListPlacesUseCase>();
+        services.AddScoped<ISelectPlaceUseCase, SelectPlaceUseCase>();
+        services.AddScoped<IDeletePlaceUseCase, DeletePlaceUseCase>();
         services.AddScoped<IGeographyQueries, GeographyQueries>();
         return services;
     }
@@ -28,6 +33,23 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IPlaceRepository, EfPlaceRepository>();
         services.AddScoped<IGeographyReader, EfGeographyReader>();
+
+        var devicesUrl = config["Services:DevicesBaseUrl"];
+        if (string.IsNullOrWhiteSpace(devicesUrl))
+        {
+            services.AddSingleton<IDeviceLinkChecker, DeviceServiceNotDeployedLinkChecker>();
+        }
+        else
+        {
+            services.AddHttpContextAccessor();
+            services.AddScoped<IAccessTokenProvider, HttpContextAccessTokenProvider>();
+            services.AddHttpClient<IDeviceLinkChecker, HttpDeviceLinkChecker>(client =>
+            {
+                client.BaseAddress = new Uri(devicesUrl.EndsWith('/') ? devicesUrl : devicesUrl + "/");
+                client.Timeout = TimeSpan.FromSeconds(5);
+            });
+        }
+
         return services;
     }
 }

@@ -10,6 +10,11 @@ namespace SyWater.Places.Api.Controllers;
 [Route("api/places")]
 public sealed class PlacesController : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<PlaceView>>> List(
+        [FromServices] IListPlacesUseCase useCase, CancellationToken ct) =>
+        Ok(await useCase.ExecuteAsync(User.GetUserId(), ct));
+
     [HttpGet("{placeId:guid}")]
     public async Task<ActionResult<PlaceView>> Get(
         Guid placeId, [FromServices] IGetPlaceUseCase useCase, CancellationToken ct) =>
@@ -41,4 +46,17 @@ public sealed class PlacesController : ControllerBase
             request.Type!.Value,
             request.Address!,
             request.MeasurementUnit!.Value), ct));
+
+    [HttpPut("{placeId:guid}/default")]
+    public async Task<ActionResult<PlaceView>> Select(
+        Guid placeId, [FromServices] ISelectPlaceUseCase useCase, CancellationToken ct) =>
+        Ok(await useCase.ExecuteAsync(User.GetUserId(), placeId, ct));
+
+    [HttpDelete("{placeId:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid placeId, [FromServices] IDeletePlaceUseCase useCase, CancellationToken ct)
+    {
+        await useCase.ExecuteAsync(User.GetUserId(), placeId, ct);
+        return NoContent();
+    }
 }

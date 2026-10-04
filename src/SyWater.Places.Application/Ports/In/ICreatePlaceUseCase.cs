@@ -21,6 +21,21 @@ public interface IUpdatePlaceUseCase
     Task<PlaceView> ExecuteAsync(UpdatePlaceCommand command, CancellationToken ct);
 }
 
+public interface IListPlacesUseCase
+{
+    Task<IReadOnlyList<PlaceView>> ExecuteAsync(Guid ownerId, CancellationToken ct);
+}
+
+public interface ISelectPlaceUseCase
+{
+    Task<PlaceView> ExecuteAsync(Guid ownerId, Guid placeId, CancellationToken ct);
+}
+
+public interface IDeletePlaceUseCase
+{
+    Task ExecuteAsync(Guid ownerId, Guid placeId, CancellationToken ct);
+}
+
 public interface IGeographyQueries
 {
     Task<IReadOnlyList<CountryView>> ListCountriesAsync(CancellationToken ct);

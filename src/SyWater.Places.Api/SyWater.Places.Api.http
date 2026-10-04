@@ -1,6 +1,46 @@
-@SyWater.Places.Api_HostAddress = http://localhost:5219
+# Manual tests for ms-places (VS Code "REST Client" or Rider/Visual Studio).
+# 1) Log in with ms-iam and paste the accessToken below (it lasts 1 hour).
+@host = http://localhost:3002
+@token = PASTE_ACCESS_TOKEN_HERE
+@placeId = PASTE_A_PLACE_ID_HERE
 
-GET {{SyWater.Places.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### HU-010 — my places (the selected one first; [] = the app shows "create your first place")
+GET {{host}}/api/places
+Authorization: Bearer {{token}}
 
-###
+### HU-009 — create a place (the first one becomes the selected one)
+POST {{host}}/api/places
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cityId": "PASTE_A_CITY_ID",
+  "name": "Casa",
+  "type": "RESIDENTIAL",
+  "address": "Cra 7 # 12-34"
+}
+
+### HU-010 — select a place (remembered in the database, survives logout)
+PUT {{host}}/api/places/{{placeId}}/default
+Authorization: Bearer {{token}}
+
+### HU-011 — edit
+PUT {{host}}/api/places/{{placeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cityId": "PASTE_A_CITY_ID",
+  "name": "Casa principal",
+  "type": "RESIDENTIAL",
+  "address": "Cra 7 # 12-34",
+  "measurementUnit": "LITERS"
+}
+
+### HU-011 — delete (204; 409 place.has_active_device if a device is linked)
+DELETE {{host}}/api/places/{{placeId}}
+Authorization: Bearer {{token}}
+
+### Revocation: after POST /api/auth/logout in ms-iam, this must answer 401
+GET {{host}}/api/places
+Authorization: Bearer {{token}}
