@@ -30,6 +30,9 @@ public sealed class EfPlaceRepository(PlacesDbContext db) : IPlaceRepository
     public Task<bool> OwnerHasActivePlacesAsync(Guid ownerId, CancellationToken ct) =>
         db.Places.AnyAsync(p => p.OwnerId == ownerId && p.DeletedAt == null, ct);   // uses IX_places_owner
 
+    public Task<int> CountActiveAsync(CancellationToken ct) =>
+        db.Places.CountAsync(p => p.DeletedAt == null, ct);
+
     public async Task AddAsync(Place place, CancellationToken ct)
     {
         db.Places.Add(PlaceMapper.ToEntity(place));

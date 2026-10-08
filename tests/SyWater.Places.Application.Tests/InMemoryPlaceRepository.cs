@@ -24,6 +24,9 @@ internal sealed class InMemoryPlaceRepository : IPlaceRepository
     public Task<bool> OwnerHasActivePlacesAsync(Guid ownerId, CancellationToken ct) =>
         Task.FromResult(Items.Any(p => p.OwnerId == ownerId && !p.IsDeleted));
 
+    public Task<int> CountActiveAsync(CancellationToken ct) =>
+        Task.FromResult(Items.Count(p => !p.IsDeleted));
+
     public Task AddAsync(Place place, CancellationToken ct)
     {
         Items.Add(place);

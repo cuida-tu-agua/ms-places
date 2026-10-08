@@ -11,6 +11,9 @@ public interface IPlaceRepository
 
     Task<bool> OwnerHasActivePlacesAsync(Guid ownerId, CancellationToken ct);
 
+    /// <summary>HU-062: places of every owner that are not deleted.</summary>
+    Task<int> CountActiveAsync(CancellationToken ct);
+
     Task AddAsync(Place place, CancellationToken ct);
 
     Task<bool> UpdateAsync(Place place, CancellationToken ct);

@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISelectPlaceUseCase, SelectPlaceUseCase>();
         services.AddScoped<IDeletePlaceUseCase, DeletePlaceUseCase>();
         services.AddScoped<IGeographyQueries, GeographyQueries>();
+        services.AddScoped<IGetPlaceMetricsUseCase, GetPlaceMetricsUseCase>();
         return services;
     }
 
