@@ -62,7 +62,9 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IPlaceConsumptionReader, HttpPlaceConsumptionReader>(client =>
         {
             client.BaseAddress = new Uri(consumptionUrl.EndsWith('/') ? consumptionUrl : consumptionUrl + "/");
-            client.Timeout = TimeSpan.FromSeconds(5);
+            // The first cost query after ms-consumption starts can take ~5 s (cold start). 8 s by default, still below the
+            // 10 s the app waits, so a really slow ms-consumption is answered with 503 and not with a cut connection.
+            client.Timeout = TimeSpan.FromSeconds(config.GetValue("Services:ConsumptionTimeoutSeconds", 8));
         });
 
         var devicesUrl = config["Services:DevicesBaseUrl"];
