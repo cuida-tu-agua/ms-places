@@ -67,10 +67,25 @@ public sealed class PlaceTariff
         return new PlaceTariff(0, placeId, TariffSource.Manual, price, fixedCharge, null, now, createdBy);
     }
 
+    public const int MinStratum = 1;
+    public const int MaxStratum = 6;
+
+    /// <summary>HU-066: the user picks the stratum of their home; the prices come from the catalog of the city.</summary>
+    public static PlaceTariff Catalog(Guid placeId, int stratum, Guid createdBy, DateTime now)
+    {
+        if (stratum is < MinStratum or > MaxStratum)
+            throw new InvalidTariffException($"The stratum must be between {MinStratum} and {MaxStratum}.");
+
+        return new PlaceTariff(0, placeId, TariffSource.Catalog, null, null, stratum, now, createdBy);
+    }
+
     /// <summary>Rebuilds an entry read from the database.</summary>
     public static PlaceTariff Restore(long id, Guid placeId, TariffSource source, decimal? unitPrice,
         decimal? fixedCharge, int? stratum, DateTime validFrom, Guid createdBy) =>
         new(id, placeId, source, unitPrice, fixedCharge, stratum, validFrom, createdBy);
+
+    /// <summary>The same stratum again: nothing to add to the history.</summary>
+    public bool HasSameStratum(int stratum) => Source == TariffSource.Catalog && Stratum == stratum;
 
     /// <summary>The same prices again: saving it would only add a duplicate row to the history.</summary>
     public bool HasSameManualPrices(decimal unitPricePerM3, decimal? fixedMonthlyCharge) =>

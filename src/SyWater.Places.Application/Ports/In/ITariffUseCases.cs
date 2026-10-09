@@ -13,3 +13,21 @@ public interface ISetManualTariffUseCase
 {
     Task<TariffView> ExecuteAsync(SetManualTariffCommand command, CancellationToken ct);
 }
+
+/// <summary>HU-066 / HU-069: the user picks the stratum and the prices of the city catalog are used.</summary>
+public interface ISetCatalogTariffUseCase
+{
+    Task<TariffView> ExecuteAsync(SetCatalogTariffCommand command, CancellationToken ct);
+}
+
+/// <summary>HU-066: the preloaded tariffs of a city, by stratum.</summary>
+public interface IGetTariffCatalogUseCase
+{
+    Task<TariffCatalogView> ExecuteAsync(Guid cityId, CancellationToken ct);
+}
+
+/// <summary>HU-056: what the water of a day, week or month costs (an estimate).</summary>
+public interface IGetPlaceCostUseCase
+{
+    Task<CostEstimateView> ExecuteAsync(Guid ownerId, Guid placeId, string? period, string? timeZone, CancellationToken ct);
+}

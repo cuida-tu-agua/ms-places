@@ -12,4 +12,7 @@ public sealed class PlacesDbContext(DbContextOptions<PlacesDbContext> options) :
     public DbSet<CityEntity> Cities => Set<CityEntity>();
     public DbSet<PlaceActivityEntity> ActivityLog => Set<PlaceActivityEntity>();
     public DbSet<PlaceTariffEntity> PlaceTariffs => Set<PlaceTariffEntity>();
+    public DbSet<TariffCatalogEntity> TariffCatalog => Set<TariffCatalogEntity>();
+    public DbSet<TipEntity> Tips => Set<TipEntity>();
+    public DbSet<TipFavoriteEntity> TipFavorites => Set<TipFavoriteEntity>();
 }

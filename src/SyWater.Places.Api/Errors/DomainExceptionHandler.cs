@@ -3,6 +3,7 @@ using SyWater.Places.Application.Ports.Out;
 using SyWater.Places.Domain.Common;
 using SyWater.Places.Domain.Places;
 using SyWater.Places.Domain.Tariffs;
+using SyWater.Places.Domain.Tips;
 
 namespace SyWater.Places.Api.Errors;
 
@@ -17,6 +18,9 @@ public sealed class DomainExceptionHandler(IProblemDetailsService problemDetails
             InvalidPlaceException e => (StatusCodes.Status400BadRequest, e.Code),
             CityNotFoundException e => (StatusCodes.Status400BadRequest, e.Code),
             InvalidTariffException e => (StatusCodes.Status400BadRequest, e.Code),
+            TariffCatalogUnavailableException e => (StatusCodes.Status404NotFound, e.Code),
+            InvalidTipException e => (StatusCodes.Status400BadRequest, e.Code),
+            TipNotFoundException e => (StatusCodes.Status404NotFound, e.Code),
             PlaceHasActiveDeviceException e => (StatusCodes.Status409Conflict, e.Code),
             ExternalServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "service.unavailable"),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "auth.invalid_token"),

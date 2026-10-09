@@ -38,7 +38,8 @@ public class PlaceTariffTests
     private readonly Guid _owner = Guid.NewGuid();
 
     private SetManualTariffUseCase Set => new(_places, _tariffs, _clock);
-    private GetPlaceTariffsUseCase Get => new(_places, _tariffs);
+    private readonly FakeTariffCatalog _catalog = new();
+    private GetPlaceTariffsUseCase Get => new(_places, _tariffs, _catalog, _clock);
 
     private async Task<PlaceView> CreatePlace(Guid? owner = null)
     {

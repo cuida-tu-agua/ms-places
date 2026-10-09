@@ -22,7 +22,9 @@ builder.Services.AddPlacesInfrastructure(builder.Configuration);
 
 builder.Services.AddIamJwtAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddAuthorizationBuilder()
-    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+    // HU-063/064: the tips are managed by administrators. ms-iam puts the roles of the user in the claim "roles"
+    .AddPolicy(AuthorizationPolicies.Admin, policy => policy.RequireClaim("roles", AuthorizationPolicies.AdminRole));
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
