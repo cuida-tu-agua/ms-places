@@ -22,6 +22,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDeletePlaceUseCase, DeletePlaceUseCase>();
         services.AddScoped<IGeographyQueries, GeographyQueries>();
         services.AddScoped<IGetPlaceMetricsUseCase, GetPlaceMetricsUseCase>();
+        services.AddScoped<IGetPlaceTariffsUseCase, GetPlaceTariffsUseCase>();
+        services.AddScoped<ISetManualTariffUseCase, SetManualTariffUseCase>();
         return services;
     }
 
@@ -34,6 +36,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IPlaceRepository, EfPlaceRepository>();
         services.AddScoped<IGeographyReader, EfGeographyReader>();
+        services.AddScoped<IPlaceTariffRepository, EfPlaceTariffRepository>();
 
         var devicesUrl = config["Services:DevicesBaseUrl"];
         if (string.IsNullOrWhiteSpace(devicesUrl))

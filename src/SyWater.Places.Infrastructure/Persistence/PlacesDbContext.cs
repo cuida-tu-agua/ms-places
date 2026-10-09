@@ -11,4 +11,5 @@ public sealed class PlacesDbContext(DbContextOptions<PlacesDbContext> options) :
     public DbSet<SubdivisionEntity> Subdivisions => Set<SubdivisionEntity>();
     public DbSet<CityEntity> Cities => Set<CityEntity>();
     public DbSet<PlaceActivityEntity> ActivityLog => Set<PlaceActivityEntity>();
+    public DbSet<PlaceTariffEntity> PlaceTariffs => Set<PlaceTariffEntity>();
 }
