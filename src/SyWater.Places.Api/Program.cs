@@ -5,6 +5,7 @@ using SyWater.Places.Api.Composition;
 using SyWater.Places.Api.Errors;
 using SyWater.Places.Api.Security;
 using SyWater.Places.Infrastructure.Persistence;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,13 @@ builder.Services
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, context, cancellationToken) =>
+{
+    var serverUrl = builder.Configuration["OpenApi:ServerUrl"];
+    if (!string.IsNullOrWhiteSpace(serverUrl))
+        document.Servers = [new OpenApiServer { Url = serverUrl }];
+    return Task.CompletedTask;
+}));
 
 builder.Services.AddPlacesApplication();
 builder.Services.AddPlacesInfrastructure(builder.Configuration);
@@ -37,7 +44,8 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
+// Development: always. Other environments: only when OpenApi:Enabled=true (set by infra).
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("OpenApi:Enabled"))
 {
     app.MapOpenApi().AllowAnonymous(); // GET /openapi/v1.json
 }
