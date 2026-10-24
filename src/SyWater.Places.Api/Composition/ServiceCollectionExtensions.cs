@@ -5,7 +5,9 @@ using SyWater.Places.Application.Ports.Out;
 using SyWater.Places.Application.UseCases;
 using SyWater.Places.Infrastructure.Consumption;
 using SyWater.Places.Infrastructure.Devices;
+using SyWater.Places.Infrastructure.Iam;
 using SyWater.Places.Infrastructure.Persistence;
+using SyWater.Places.Infrastructure.Sharing;
 
 namespace SyWater.Places.Api.Composition;
 
@@ -34,6 +36,25 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListAdminTipsUseCase, ListAdminTipsUseCase>();
         services.AddScoped<IGetTipsUseCase, GetTipsUseCase>();
         services.AddScoped<IManageTipFavoritesUseCase, ManageTipFavoritesUseCase>();
+
+        // Sharing (HU-039 to HU-047)
+        services.AddScoped<IPlaceAccessService, PlaceAccessService>();
+        services.AddScoped<IGetPlaceAccessUseCase, GetPlaceAccessUseCase>();
+        services.AddScoped<IListSharedPlacesUseCase, ListSharedPlacesUseCase>();
+        services.AddScoped<IGetPlaceRecipientsUseCase, GetPlaceRecipientsUseCase>();
+        services.AddScoped<ICreateGuestLinkUseCase, CreateGuestLinkUseCase>();
+        services.AddScoped<IGetGuestLinkUseCase, GetGuestLinkUseCase>();
+        services.AddScoped<IDeactivateGuestLinkUseCase, DeactivateGuestLinkUseCase>();
+        services.AddScoped<IResolveGuestLinkUseCase, ResolveGuestLinkUseCase>();
+        services.AddScoped<IInviteCollaboratorUseCase, InviteCollaboratorUseCase>();
+        services.AddScoped<IListInvitationsUseCase, ListInvitationsUseCase>();
+        services.AddScoped<ICancelInvitationUseCase, CancelInvitationUseCase>();
+        services.AddScoped<IListMyInvitationsUseCase, ListMyInvitationsUseCase>();
+        services.AddScoped<IAnswerInvitationUseCase, AnswerInvitationUseCase>();
+        services.AddScoped<IListMembersUseCase, ListMembersUseCase>();
+        services.AddScoped<IChangeMemberPermissionsUseCase, ChangeMemberPermissionsUseCase>();
+        services.AddScoped<IRevokeMemberUseCase, RevokeMemberUseCase>();
+        services.AddScoped<ILeavePlaceUseCase, LeavePlaceUseCase>();
         return services;
     }
 
@@ -48,6 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGeographyReader, EfGeographyReader>();
         services.AddScoped<IPlaceTariffRepository, EfPlaceTariffRepository>();
         services.AddScoped<ITariffCatalog, EfTariffCatalog>();
+        services.AddScoped<ISharingRepository, EfSharingRepository>();
+        services.AddSingleton<IGuestTokenGenerator, RandomGuestTokenGenerator>();
         services.AddScoped<EfTipRepository>();
         services.AddScoped<ITipRepository>(sp => sp.GetRequiredService<EfTipRepository>());
         services.AddScoped<ITipFavoriteRepository>(sp => sp.GetRequiredService<EfTipRepository>());
@@ -78,6 +101,33 @@ public static class ServiceCollectionExtensions
             {
                 client.BaseAddress = new Uri(devicesUrl.EndsWith('/') ? devicesUrl : devicesUrl + "/");
                 client.Timeout = TimeSpan.FromSeconds(5);
+            });
+        }
+
+        // ms-iam: finds the people behind an id or an e-mail and sends the invitation e-mail. Same shared key as the others
+        // Without the URL or the key (a local run that only sets the connection string) sharing answers 503 instead of
+        // keeping the whole service from starting.
+        var iamUrl = config["Services:IamBaseUrl"];
+        var internalKey = config["Internal:ApiKey"];
+        if (string.IsNullOrWhiteSpace(iamUrl) || string.IsNullOrWhiteSpace(internalKey) || internalKey.Length < 24)
+        {
+            services.AddSingleton<IUserDirectory, IamNotConfiguredUserDirectory>();
+            services.AddSingleton<IInvitationNotifier, IamNotConfiguredInvitationNotifier>();
+        }
+        else
+        {
+            var iamBase = new Uri(iamUrl.EndsWith('/') ? iamUrl : iamUrl + "/");
+            services.AddHttpClient<IUserDirectory, HttpUserDirectory>((http, _) =>
+            {
+                http.BaseAddress = iamBase;
+                http.Timeout = TimeSpan.FromSeconds(5);
+                return new HttpUserDirectory(http, internalKey);
+            });
+            services.AddHttpClient<IInvitationNotifier, HttpInvitationNotifier>((http, _) =>
+            {
+                http.BaseAddress = iamBase;
+                http.Timeout = TimeSpan.FromSeconds(5);
+                return new HttpInvitationNotifier(http, internalKey);
             });
         }
 
