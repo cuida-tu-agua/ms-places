@@ -8,4 +8,5 @@ public sealed record PlaceActivity(
     DateTime OccurredAt)
 {
     public const string PlaceDeleted = "PLACE_DELETED";
+    public const string CollaboratorRevoked = "COLLABORATOR_REVOKED";
 }
