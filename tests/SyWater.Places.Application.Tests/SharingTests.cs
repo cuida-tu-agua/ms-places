@@ -13,6 +13,7 @@ public class SharingTests
     private readonly InMemorySharingRepository _sharing = new();
     private readonly FakeUserDirectory _users = new();
     private readonly FakeInvitationNotifier _mail = new();
+    private readonly FakeInvitationAlerts _alerts = new();
     private readonly FakeGeographyReader _geography = new();
     private readonly FakeClock _clock = new(new DateTimeOffset(2026, 10, 9, 15, 0, 0, TimeSpan.Zero));
     private readonly UserContact _owner;
@@ -35,8 +36,8 @@ public class SharingTests
     private readonly FakeTokenGenerator _tokens = new();
     private CreateGuestLinkUseCase CreateLink => new(_places, _sharing, _tokens, _clock);
     private ResolveGuestLinkUseCase ResolveLink => new(_places, _sharing, _geography);
-    private InviteCollaboratorUseCase Invite => new(_places, _sharing, _users, _mail, _clock);
-    private AnswerInvitationUseCase Answer => new(_places, _sharing, _users, _geography, _clock);
+    private InviteCollaboratorUseCase Invite => new(_places, _sharing, _users, _mail, _clock, _alerts);
+    private AnswerInvitationUseCase Answer => new(_places, _sharing, _users, _geography, _clock, _alerts);
 
     private Task<SentInvitationView> InviteAna(params string[] permissions) =>
         Invite.ExecuteAsync(new InviteCollaboratorCommand(_owner.UserId, _placeId, "ana@mail.com", permissions), default);
@@ -512,5 +513,57 @@ public class SharingTests
         var member = _sharing.Members.Single();
         member.ChangePermissions(PermissionSet.FromKeys(["VIEW_BILLS"]), _clock.GetUtcNow().UtcDateTime);
         await reader.ExecuteAsync(_ana.UserId, _placeId, default);
+    }
+
+    // ── Notices to ms-notification: notification center, WhatsApp / SMS and the answer (HU-042 / HU-043) ──
+
+    [Fact]
+    public async Task A_registered_person_is_announced_to_ms_notification_with_their_account()
+    {
+        var sent = await InviteAna("VIEW_CONSUMPTION", "CONTROL_VALVE");
+
+        var alert = Assert.Single(_alerts.Sent);
+        Assert.Equal(sent.Invitation.Id, alert.InvitationId);
+        Assert.Equal(_placeId, alert.PlaceId);
+        Assert.Equal(_ana.UserId, alert.InviteeUserId);
+        Assert.Equal("Casa", alert.PlaceName);
+        Assert.Equal("Olga Owner", alert.InvitedByName);
+        Assert.Contains("CONTROL_VALVE", alert.Permissions);
+    }
+
+    [Fact]
+    public async Task An_email_without_account_is_announced_without_a_user()
+    {
+        await Invite.ExecuteAsync(new InviteCollaboratorCommand(_owner.UserId, _placeId, "nueva@mail.com", ["VIEW_CONSUMPTION"]), default);
+
+        Assert.Null(Assert.Single(_alerts.Sent).InviteeUserId);
+    }
+
+    [Fact]
+    public async Task The_owner_is_told_when_the_invitation_is_accepted_or_rejected()
+    {
+        await AnaCollaborates("VIEW_CONSUMPTION");
+        var accepted = Assert.Single(_alerts.Answers);
+        Assert.True(accepted.Accepted);
+        Assert.Equal(_owner.UserId, accepted.OwnerId);
+        Assert.Equal("Ana", accepted.InviteeName);
+
+        var sent = await Invite.ExecuteAsync(new InviteCollaboratorCommand(_owner.UserId, _placeId, "luis@mail.com", ["VIEW_CONSUMPTION"]), default);
+        await Answer.RejectAsync(_luis.UserId, sent.Invitation.Id, default);
+
+        Assert.False(_alerts.Answers[1].Accepted);
+        Assert.Equal("Luis", _alerts.Answers[1].InviteeName);
+    }
+
+    [Fact]
+    public async Task If_ms_notification_is_down_inviting_and_answering_still_work()
+    {
+        _alerts.IsDown = true;
+
+        var shared = await AnaCollaborates("VIEW_CONSUMPTION");
+
+        Assert.Equal("COLLABORATOR", shared.Role);
+        Assert.Empty(_alerts.Sent);
+        Assert.Empty(_alerts.Answers);
     }
 }

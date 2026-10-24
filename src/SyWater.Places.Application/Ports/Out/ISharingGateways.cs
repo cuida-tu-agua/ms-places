@@ -25,3 +25,17 @@ public interface IGuestTokenGenerator
 {
     string NewToken();
 }
+
+/// <summary>
+/// HU-042 / HU-043 · ms-notification: the invited person finds the invitation in the notification center (and gets it by
+/// WhatsApp / SMS when their phone is verified), and the owner learns the answer. Best effort: the invitation is already
+/// saved, so a notification service that is down never makes it fail.
+/// </summary>
+public interface IInvitationAlerts
+{
+    /// <summary>True if ms-notification took it.</summary>
+    Task<bool> InvitationSentAsync(InvitationAlert alert, CancellationToken ct);
+
+    /// <summary>True if ms-notification took it.</summary>
+    Task<bool> InvitationAnsweredAsync(InvitationAnswerAlert alert, CancellationToken ct);
+}

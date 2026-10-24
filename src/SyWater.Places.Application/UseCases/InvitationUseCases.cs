@@ -13,7 +13,8 @@ public sealed class InviteCollaboratorUseCase(
     ISharingRepository sharing,
     IUserDirectory users,
     IInvitationNotifier notifier,
-    TimeProvider clock) : IInviteCollaboratorUseCase
+    TimeProvider clock,
+    IInvitationAlerts? alerts = null) : IInviteCollaboratorUseCase
 {
     public async Task<SentInvitationView> ExecuteAsync(InviteCollaboratorCommand command, CancellationToken ct)
     {
@@ -53,6 +54,11 @@ public sealed class InviteCollaboratorUseCase(
 
         var sent = await notifier.SendInvitationAsync(
             new InvitationMail(invitation.Id, invitation.Email, place.Name, owner?.Name, invitation.Permissions.Keys, invitation.ExpiresAt), ct);
+
+        // The notification center (and WhatsApp / SMS) of the invited person, when the e-mail already has an account
+        if (alerts is not null)
+            await alerts.InvitationSentAsync(new InvitationAlert(invitation.Id, place.Id, place.Name, registered?.UserId, owner?.Name,
+                invitation.Permissions.Keys, invitation.ExpiresAt), ct);
         return new SentInvitationView(InvitationView.From(invitation, now), sent);
     }
 }
@@ -123,11 +129,12 @@ public sealed class AnswerInvitationUseCase(
     ISharingRepository sharing,
     IUserDirectory users,
     IGeographyReader geography,
-    TimeProvider clock) : IAnswerInvitationUseCase
+    TimeProvider clock,
+    IInvitationAlerts? alerts = null) : IAnswerInvitationUseCase
 {
     public async Task<SharedPlaceView> AcceptAsync(Guid userId, Guid invitationId, CancellationToken ct)
     {
-        var (invitation, place) = await LoadAsync(userId, invitationId, ct);
+        var (invitation, place, me) = await LoadAsync(userId, invitationId, ct);
         if (place.OwnerId == userId) throw new InvitationNotFoundException(invitationId);
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -139,6 +146,7 @@ public sealed class AnswerInvitationUseCase(
         else member.Rejoin(invitation.Permissions, now);
 
         await sharing.AcceptInvitationAsync(invitation, member, isNew, ct);
+        await TellOwnerAsync(invitation, place, me, accepted: true, ct);
 
         var city = await geography.GetCityAsync(place.CityId, ct) ?? throw new CityNotFoundException(place.CityId);
         return new SharedPlaceView(PlaceView.From(place, city), "COLLABORATOR", member.Permissions.Keys, member.Id);
@@ -146,13 +154,22 @@ public sealed class AnswerInvitationUseCase(
 
     public async Task RejectAsync(Guid userId, Guid invitationId, CancellationToken ct)
     {
-        var (invitation, _) = await LoadAsync(userId, invitationId, ct);
+        var (invitation, place, me) = await LoadAsync(userId, invitationId, ct);
         invitation.Reject(clock.GetUtcNow().UtcDateTime);
         await sharing.UpdateInvitationAsync(invitation, ct);
+        await TellOwnerAsync(invitation, place, me, accepted: false, ct);
+    }
+
+    // The owner learns the answer in the app (best effort: the answer is already saved)
+    private async Task TellOwnerAsync(Invitation invitation, Place place, UserContact me, bool accepted, CancellationToken ct)
+    {
+        if (alerts is null) return;
+        await alerts.InvitationAnsweredAsync(
+            new InvitationAnswerAlert(invitation.Id, place.Id, place.Name, place.OwnerId, me.Name, accepted), ct);
     }
 
     // Anything that is not "an invitation sent to my e-mail for a place that still exists" is the same 404
-    private async Task<(Invitation, Place)> LoadAsync(Guid userId, Guid invitationId, CancellationToken ct)
+    private async Task<(Invitation, Place, UserContact)> LoadAsync(Guid userId, Guid invitationId, CancellationToken ct)
     {
         var invitation = await sharing.GetInvitationAsync(invitationId, ct)
                          ?? throw new InvitationNotFoundException(invitationId);
@@ -162,6 +179,6 @@ public sealed class AnswerInvitationUseCase(
 
         var place = await places.GetActiveByIdAsync(invitation.PlaceId, ct)
                     ?? throw new InvitationNotFoundException(invitationId);
-        return (invitation, place);
+        return (invitation, place, me);
     }
 }
