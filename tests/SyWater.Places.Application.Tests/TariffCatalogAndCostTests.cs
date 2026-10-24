@@ -74,8 +74,9 @@ public class TariffCatalogAndCostTests
 
     private SetCatalogTariffUseCase SetCatalog => new(_places, _tariffs, _catalog, _clock);
     private SetManualTariffUseCase SetManual => new(_places, _tariffs, _clock);
-    private GetPlaceTariffsUseCase Get => new(_places, _tariffs, _catalog, _clock);
-    private GetPlaceCostUseCase Cost => new(_places, _tariffs, _catalog, _consumption, _clock);
+    private PlaceAccessService Access => new(_places, new InMemorySharingRepository());
+    private GetPlaceTariffsUseCase Get => new(Access, _tariffs, _catalog, _clock);
+    private GetPlaceCostUseCase Cost => new(Access, _tariffs, _catalog, _consumption, _clock);
 
     private Task<TariffView> PickStratum(Guid placeId, int stratum) =>
         SetCatalog.ExecuteAsync(new SetCatalogTariffCommand(_owner, placeId, stratum), default);
