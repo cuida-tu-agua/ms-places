@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using SyWater.Places.Application.Ports.Out;
 using SyWater.Places.Domain.Common;
 using SyWater.Places.Domain.Places;
+using SyWater.Places.Domain.Sharing;
 using SyWater.Places.Domain.Tariffs;
 using SyWater.Places.Domain.Tips;
 
@@ -22,6 +23,16 @@ public sealed class DomainExceptionHandler(IProblemDetailsService problemDetails
             InvalidTipException e => (StatusCodes.Status400BadRequest, e.Code),
             TipNotFoundException e => (StatusCodes.Status404NotFound, e.Code),
             PlaceHasActiveDeviceException e => (StatusCodes.Status409Conflict, e.Code),
+            InvalidPermissionsException e => (StatusCodes.Status400BadRequest, e.Code),
+            InvalidInvitationException e => (StatusCodes.Status400BadRequest, e.Code),
+            PermissionDeniedException e => (StatusCodes.Status403Forbidden, e.Code),
+            InvitationNotFoundException e => (StatusCodes.Status404NotFound, e.Code),
+            MemberNotFoundException e => (StatusCodes.Status404NotFound, e.Code),
+            GuestLinkNotFoundException e => (StatusCodes.Status404NotFound, e.Code),
+            InvitationAlreadyPendingException e => (StatusCodes.Status409Conflict, e.Code),
+            AlreadyMemberException e => (StatusCodes.Status409Conflict, e.Code),
+            InvitationExpiredException e => (StatusCodes.Status409Conflict, e.Code),
+            InvitationNotPendingException e => (StatusCodes.Status409Conflict, e.Code),
             ExternalServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "service.unavailable"),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "auth.invalid_token"),
             _ => (0, ""),

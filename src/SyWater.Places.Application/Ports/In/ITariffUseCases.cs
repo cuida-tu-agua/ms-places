@@ -2,10 +2,10 @@ using SyWater.Places.Application.Tariffs;
 
 namespace SyWater.Places.Application.Ports.In;
 
-/// <summary>HU-054: the tariff in force and the history of a place of the user.</summary>
+/// <summary>HU-054: the tariff in force and the history of a place of the user (or one they collaborate in with VIEW_BILLS).</summary>
 public interface IGetPlaceTariffsUseCase
 {
-    Task<PlaceTariffsView> ExecuteAsync(Guid ownerId, Guid placeId, CancellationToken ct);
+    Task<PlaceTariffsView> ExecuteAsync(Guid userId, Guid placeId, CancellationToken ct);
 }
 
 /// <summary>HU-054: the user types the price per m³ of their bill (and optionally a monthly fixed charge).</summary>
@@ -29,5 +29,5 @@ public interface IGetTariffCatalogUseCase
 /// <summary>HU-056: what the water of a day, week or month costs (an estimate).</summary>
 public interface IGetPlaceCostUseCase
 {
-    Task<CostEstimateView> ExecuteAsync(Guid ownerId, Guid placeId, string? period, string? timeZone, CancellationToken ct);
+    Task<CostEstimateView> ExecuteAsync(Guid userId, Guid placeId, string? period, string? timeZone, CancellationToken ct);
 }

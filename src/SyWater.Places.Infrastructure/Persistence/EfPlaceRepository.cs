@@ -17,6 +17,27 @@ public sealed class EfPlaceRepository(PlacesDbContext db) : IPlaceRepository
         return entity is null ? null : PlaceMapper.ToDomain(entity);
     }
 
+    public async Task<Place?> GetActiveByIdAsync(Guid placeId, CancellationToken ct)
+    {
+        var entity = await db.Places
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == placeId && p.DeletedAt == null, ct);
+
+        return entity is null ? null : PlaceMapper.ToDomain(entity);
+    }
+
+    public async Task<IReadOnlyList<Place>> ListActiveByIdsAsync(IReadOnlyCollection<Guid> placeIds, CancellationToken ct)
+    {
+        if (placeIds.Count == 0) return [];
+        var ids = placeIds.ToList();
+        var entities = await db.Places
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.Id) && p.DeletedAt == null)
+            .ToListAsync(ct);
+
+        return entities.Select(PlaceMapper.ToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<Place>> ListActiveAsync(Guid ownerId, CancellationToken ct)
     {
         var entities = await db.Places
