@@ -18,6 +18,12 @@ internal sealed class InMemoryPlaceRepository : IPlaceRepository
     public Task<Place?> GetActiveAsync(Guid placeId, Guid ownerId, CancellationToken ct) =>
         Task.FromResult(Items.FirstOrDefault(p => p.Id == placeId && p.OwnerId == ownerId && !p.IsDeleted));
 
+    public Task<Place?> GetActiveByIdAsync(Guid placeId, CancellationToken ct) =>
+        Task.FromResult(Items.FirstOrDefault(p => p.Id == placeId && !p.IsDeleted));
+
+    public Task<IReadOnlyList<Place>> ListActiveByIdsAsync(IReadOnlyCollection<Guid> placeIds, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Place>>(Items.Where(p => placeIds.Contains(p.Id) && !p.IsDeleted).ToList());
+
     public Task<IReadOnlyList<Place>> ListActiveAsync(Guid ownerId, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<Place>>(Items.Where(p => p.OwnerId == ownerId && !p.IsDeleted).ToList());
 

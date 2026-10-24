@@ -2,6 +2,7 @@ using SyWater.Places.Application.Ports.In;
 using SyWater.Places.Application.Ports.Out;
 using SyWater.Places.Application.Tariffs;
 using SyWater.Places.Domain.Places;
+using SyWater.Places.Domain.Sharing;
 using SyWater.Places.Domain.Tariffs;
 
 namespace SyWater.Places.Application.UseCases;
@@ -19,14 +20,14 @@ internal static class TariffRules
         newestFirst.FirstOrDefault(t => t.ValidFrom <= at) ?? newestFirst.LastOrDefault();
 }
 
+/// <summary>The owner, or a collaborator with VIEW_BILLS (HU-044), reads the tariffs of the place.</summary>
 public sealed class GetPlaceTariffsUseCase(
-    IPlaceRepository places, IPlaceTariffRepository tariffs, ITariffCatalog catalog, TimeProvider clock)
+    IPlaceAccessService access, IPlaceTariffRepository tariffs, ITariffCatalog catalog, TimeProvider clock)
     : IGetPlaceTariffsUseCase
 {
-    public async Task<PlaceTariffsView> ExecuteAsync(Guid ownerId, Guid placeId, CancellationToken ct)
+    public async Task<PlaceTariffsView> ExecuteAsync(Guid userId, Guid placeId, CancellationToken ct)
     {
-        var place = await places.GetActiveAsync(placeId, ownerId, ct)
-                    ?? throw new PlaceNotFoundException(placeId);
+        var place = (await access.RequireAsync(userId, placeId, Permission.ViewBills, ct)).Place;
 
         var now = clock.GetUtcNow().UtcDateTime;
         var history = new List<TariffView>();
@@ -109,7 +110,7 @@ public sealed class GetTariffCatalogUseCase(IGeographyReader geography, ITariffC
 
 /// <summary>HU-056 / HU-069: the money of a period. Always labelled as an estimate.</summary>
 public sealed class GetPlaceCostUseCase(
-    IPlaceRepository places,
+    IPlaceAccessService access,
     IPlaceTariffRepository tariffs,
     ITariffCatalog catalog,
     IPlaceConsumptionReader consumption,
@@ -121,10 +122,9 @@ public sealed class GetPlaceCostUseCase(
     private static readonly HashSet<string> Periods = ["day", "week", "month"];
 
     public async Task<CostEstimateView> ExecuteAsync(
-        Guid ownerId, Guid placeId, string? period, string? timeZone, CancellationToken ct)
+        Guid userId, Guid placeId, string? period, string? timeZone, CancellationToken ct)
     {
-        var place = await places.GetActiveAsync(placeId, ownerId, ct)
-                    ?? throw new PlaceNotFoundException(placeId);
+        var place = (await access.RequireAsync(userId, placeId, Permission.ViewBills, ct)).Place;
 
         var kind = string.IsNullOrWhiteSpace(period) ? "day" : period.Trim().ToLowerInvariant();
         if (!Periods.Contains(kind))

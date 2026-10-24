@@ -39,7 +39,7 @@ public class PlaceTariffTests
 
     private SetManualTariffUseCase Set => new(_places, _tariffs, _clock);
     private readonly FakeTariffCatalog _catalog = new();
-    private GetPlaceTariffsUseCase Get => new(_places, _tariffs, _catalog, _clock);
+    private GetPlaceTariffsUseCase Get => new(new PlaceAccessService(_places, new InMemorySharingRepository()), _tariffs, _catalog, _clock);
 
     private async Task<PlaceView> CreatePlace(Guid? owner = null)
     {
