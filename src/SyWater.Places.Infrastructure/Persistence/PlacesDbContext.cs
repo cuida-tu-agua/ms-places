@@ -15,4 +15,7 @@ public sealed class PlacesDbContext(DbContextOptions<PlacesDbContext> options) :
     public DbSet<TariffCatalogEntity> TariffCatalog => Set<TariffCatalogEntity>();
     public DbSet<TipEntity> Tips => Set<TipEntity>();
     public DbSet<TipFavoriteEntity> TipFavorites => Set<TipFavoriteEntity>();
+    public DbSet<PlaceMemberEntity> PlaceMembers => Set<PlaceMemberEntity>();
+    public DbSet<InvitationEntity> Invitations => Set<InvitationEntity>();
+    public DbSet<GuestLinkEntity> GuestLinks => Set<GuestLinkEntity>();
 }
