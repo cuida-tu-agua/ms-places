@@ -33,7 +33,8 @@ Gestiona los lugares de cada usuario (crear, listar, cambiar de lugar, editar y 
 ## Cómo correr localmente
 ```powershell
 # 1. Database: ms-iam-db and ms-places-db applied (docker compose up in each)
-# 2. Service (inside ms-places). Services:IamBaseUrl and Internal:ApiKey (same value as in ms-iam, 24+ chars) enable invitations; without them sharing answers 503:
+# 2. Service (inside ms-places). Services:IamBaseUrl and Internal:ApiKey (same value as in ms-iam, 24+ chars) enable invitations; without them sharing answers 503.
+#    Services:NotificationsBaseUrl (ms-notification) puts the invitation in the notification center of the invited person (and WhatsApp / SMS) and tells the owner the answer; without it invitations go only by e-mail:
 dotnet user-secrets set "ConnectionStrings:Places" "Server=localhost,1433;Database=sy-water-db;User Id=places_app;Password=<PLACES_APP_PASSWORD>;TrustServerCertificate=True" --project src/SyWater.Places.Api
 Copy-Item <ms-iam>/keys/public.pem src/SyWater.Places.Api/keys/iam-public.pem   # ms-iam PUBLIC key
 dotnet test

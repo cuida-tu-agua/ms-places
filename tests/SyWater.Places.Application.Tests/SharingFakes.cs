@@ -122,3 +122,25 @@ internal sealed class FakeTokenGenerator : IGuestTokenGenerator
     private int _n;
     public string NewToken() => $"token-{++_n:D3}-".PadRight(40, 'x');
 }
+
+/// <summary>ms-notification double: records what it was told, or pretends to be down.</summary>
+internal sealed class FakeInvitationAlerts : IInvitationAlerts
+{
+    public List<InvitationAlert> Sent { get; } = [];
+    public List<InvitationAnswerAlert> Answers { get; } = [];
+    public bool IsDown { get; set; }
+
+    public Task<bool> InvitationSentAsync(InvitationAlert alert, CancellationToken ct)
+    {
+        if (IsDown) return Task.FromResult(false);
+        Sent.Add(alert);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> InvitationAnsweredAsync(InvitationAnswerAlert alert, CancellationToken ct)
+    {
+        if (IsDown) return Task.FromResult(false);
+        Answers.Add(alert);
+        return Task.FromResult(true);
+    }
+}

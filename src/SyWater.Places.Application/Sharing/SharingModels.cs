@@ -99,3 +99,12 @@ public sealed record UserContact(Guid UserId, string Email, string Name);
 
 /// <summary>HU-047: who must be told about something of a place.</summary>
 public sealed record PlaceRecipientView(Guid UserId, string Role);
+
+/// <summary>What ms-notification needs about a new invitation. InviteeUserId is null when the e-mail has no account yet.</summary>
+public sealed record InvitationAlert(
+    Guid InvitationId, Guid PlaceId, string PlaceName, Guid? InviteeUserId, string? InvitedByName,
+    IReadOnlyList<string> Permissions, DateTime ExpiresAt);
+
+/// <summary>The invited person answered: the owner is told.</summary>
+public sealed record InvitationAnswerAlert(
+    Guid InvitationId, Guid PlaceId, string PlaceName, Guid OwnerId, string? InviteeName, bool Accepted);

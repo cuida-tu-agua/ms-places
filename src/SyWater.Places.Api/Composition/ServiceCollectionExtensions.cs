@@ -6,6 +6,7 @@ using SyWater.Places.Application.UseCases;
 using SyWater.Places.Infrastructure.Consumption;
 using SyWater.Places.Infrastructure.Devices;
 using SyWater.Places.Infrastructure.Iam;
+using SyWater.Places.Infrastructure.Notifications;
 using SyWater.Places.Infrastructure.Persistence;
 using SyWater.Places.Infrastructure.Sharing;
 
@@ -128,6 +129,20 @@ public static class ServiceCollectionExtensions
                 http.BaseAddress = iamBase;
                 http.Timeout = TimeSpan.FromSeconds(5);
                 return new HttpInvitationNotifier(http, internalKey);
+            });
+        }
+
+        // HU-042 / HU-043: ms-notification puts the invitation in the notification center of the invited person (and sends it by
+        // WhatsApp / SMS) and tells the owner the answer. Without its URL or the key, invitations still work, only by e-mail.
+        var notificationsUrl = config["Services:NotificationsBaseUrl"];
+        if (!string.IsNullOrWhiteSpace(notificationsUrl) && internalKey is { Length: >= 24 })
+        {
+            var notificationsBase = new Uri(notificationsUrl.EndsWith('/') ? notificationsUrl : notificationsUrl + "/");
+            services.AddHttpClient<IInvitationAlerts, HttpInvitationAlerts>((http, sp) =>
+            {
+                http.BaseAddress = notificationsBase;
+                http.Timeout = TimeSpan.FromSeconds(5);
+                return new HttpInvitationAlerts(http, internalKey, sp.GetRequiredService<ILogger<HttpInvitationAlerts>>());
             });
         }
 
